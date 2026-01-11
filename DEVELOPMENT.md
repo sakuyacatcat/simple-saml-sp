@@ -9,6 +9,8 @@
 3. [このプロジェクトでの実装](#このプロジェクトでの実装)
 4. [メタデータの手動設定方法](#メタデータの手動設定方法)
 5. [署名と証明書](#署名と証明書)
+6. [Keycloak と realm-export.json](#keycloak-と-realm-exportjson)
+7. [デバッグ](#デバッグ)
 
 ---
 
@@ -361,6 +363,236 @@ cat cert.pem | grep -v "CERTIFICATE" | tr -d '\n'
 ```
 
 3. **Keycloak を再起動:**
+
+```bash
+make docker-down
+make docker-up
+```
+
+---
+
+## Keycloak と realm-export.json
+
+### Keycloak の基本構造
+
+Keycloak は **Realm（レルム）** という単位でテナント/名前空間を管理します：
+
+```txt
+Keycloak サーバー
+├── master realm（管理用、デフォルトで存在）
+│   └── admin ユーザー
+│
+└── myrealm（アプリケーション用に作成）
+    ├── Users（ユーザー）
+    │   └── testuser
+    ├── Clients（連携アプリケーション = SP）
+    │   └── http://localhost:3000/metadata
+    ├── Roles（権限）
+    └── Keys（SAML 署名鍵）
+        └── rsa-saml-signing
+```
+
+### realm-export.json とは
+
+Keycloak の Realm 設定をエクスポートした JSON ファイルです。このプロジェクトでは、Keycloak 起動時に自動インポートすることで、手動設定なしで IdP を構築しています。
+
+**インポートの仕組み（docker-compose.yml）:**
+
+```yaml
+idp:
+  image: quay.io/keycloak/keycloak:26.0
+  command: start-dev --import-realm  # ← 起動時にインポート実行
+  volumes:
+    # /opt/keycloak/data/import/ 内の JSON を自動読み込み
+    - ./idp/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+```
+
+### realm-export.json の構造
+
+```json
+{
+  "realm": "myrealm",
+  "enabled": true,
+  "sslRequired": "none",
+
+  // ========== ユーザー定義 ==========
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",      // 平文で指定（インポート時にハッシュ化される）
+          "temporary": false
+        }
+      ]
+    }
+  ],
+
+  // ========== クライアント（SP）定義 ==========
+  "clients": [
+    {
+      "clientId": "http://localhost:3000/metadata",  // SP の entityID と一致させる
+      "name": "Simple SAML SP",
+      "enabled": true,
+      "protocol": "saml",                            // SAML プロトコルを使用
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:3000/*"],
+      "adminUrl": "http://localhost:3000/acs",       // ACS URL
+
+      "attributes": {
+        "saml.force.post.binding": "true",           // POST バインディングを強制
+        "saml.authnstatement": "true",
+        "saml.server.signature": "true",             // IdP がレスポンスに署名
+        "saml.assertion.signature": "false",
+        "saml.client.signature": "false",            // SP の署名検証はしない
+        "saml_name_id_format": "username"            // NameID にユーザー名を使用
+      },
+      "fullScopeAllowed": true
+    }
+  ],
+
+  // ========== 署名鍵定義 ==========
+  "components": {
+    "org.keycloak.keys.KeyProvider": [
+      {
+        "name": "rsa-saml-signing",
+        "providerId": "rsa",
+        "config": {
+          // 秘密鍵（PKCS#8 形式、Base64）
+          "privateKey": ["MIIEvAIBADANBgkqhki..."],
+          // 公開鍵証明書（X.509 形式、Base64）
+          "certificate": ["MIIDBTCCAe2gAwIBAgIU..."],
+          "priority": ["100"],
+          "algorithm": ["RS256"]
+        }
+      }
+    ]
+  }
+}
+```
+
+### 主要な設定項目
+
+| セクション | 説明 |
+|-----------|------|
+| `realm` | Realm 名。URL パスに使われる（`/realms/myrealm/...`） |
+| `users` | テストユーザーの定義 |
+| `clients` | SP（サービスプロバイダー）の登録情報 |
+| `components.KeyProvider` | SAML 署名に使う RSA 鍵ペア |
+
+### clients の attributes 詳細
+
+| 属性 | 説明 |
+|-----|------|
+| `saml.server.signature` | `true`: IdP が SAMLResponse に署名する |
+| `saml.assertion.signature` | `true`: Assertion 部分にも個別に署名する |
+| `saml.client.signature` | `true`: SP からの AuthnRequest の署名を検証する |
+| `saml.force.post.binding` | `true`: HTTP-POST バインディングを強制 |
+| `saml_name_id_format` | NameID の形式（`username`, `email`, `persistent` など） |
+
+### realm-export.json の作成方法
+
+#### 方法 1: Keycloak 管理画面からエクスポート
+
+```bash
+# 1. Keycloak を起動
+make docker-up
+
+# 2. 管理画面にアクセス
+#    http://localhost:8080
+#    admin / admin でログイン
+
+# 3. 左上のドロップダウンで「myrealm」を選択
+
+# 4. 左メニュー「Realm settings」→ 右上「Action」→「Partial export」
+#    - Include clients: ON
+#    - Include groups and roles: ON
+#    → Export ボタンをクリック
+
+# 5. ダウンロードされた JSON を idp/realm-export.json として保存
+```
+
+#### 方法 2: CLI でエクスポート
+
+```bash
+# Keycloak コンテナ内でエクスポート
+docker exec -it simple-saml-sp-idp-1 \
+  /opt/keycloak/bin/kc.sh export \
+  --dir /tmp/export \
+  --realm myrealm
+
+# ファイルをホストにコピー
+docker cp simple-saml-sp-idp-1:/tmp/export/myrealm-realm.json ./idp/realm-export.json
+```
+
+#### 方法 3: 手動で作成（最小構成）
+
+```json
+{
+  "realm": "myrealm",
+  "enabled": true,
+  "sslRequired": "none",
+
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ]
+    }
+  ],
+
+  "clients": [
+    {
+      "clientId": "http://localhost:3000/metadata",
+      "protocol": "saml",
+      "rootUrl": "http://localhost:3000",
+      "adminUrl": "http://localhost:3000/acs",
+      "redirectUris": ["http://localhost:3000/*"],
+      "attributes": {
+        "saml.force.post.binding": "true",
+        "saml.server.signature": "true"
+      }
+    }
+  ]
+}
+```
+
+> **注意:** 署名鍵（`components.KeyProvider`）を省略すると、Keycloak が起動時に自動生成します。ただし、再起動のたびに鍵が変わるため、SP 側の証明書設定も更新が必要になります。本プロジェクトでは固定の鍵を定義しています。
+
+### 新しい SP を追加する場合
+
+1. `clients` 配列に新しいエントリを追加：
+
+```json
+{
+  "clients": [
+    // 既存の SP...
+    {
+      "clientId": "http://localhost:4000/metadata",  // 新 SP の entityID
+      "protocol": "saml",
+      "rootUrl": "http://localhost:4000",
+      "adminUrl": "http://localhost:4000/acs",
+      "redirectUris": ["http://localhost:4000/*"],
+      "attributes": {
+        "saml.force.post.binding": "true",
+        "saml.server.signature": "true",
+        "saml.client.signature": "false",
+        "saml_name_id_format": "username"
+      }
+    }
+  ]
+}
+```
+
+2. Keycloak を再起動：
 
 ```bash
 make docker-down
