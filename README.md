@@ -26,7 +26,7 @@ cp config.example.yaml config.yaml
 npm run dev
 ```
 
-Open http://localhost:3000
+Open `http://localhost:3000`
 
 ## Configuration
 
@@ -62,16 +62,16 @@ DEBUG=true
 
 ## Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Home page |
-| `/metadata` | GET | SP Metadata XML |
-| `/login` | GET | Start SAML login |
-| `/acs` | POST | Assertion Consumer Service |
-| `/profile` | GET | View user attributes |
-| `/debug` | GET | View raw SAML Response |
-| `/logout` | GET | Logout |
-| `/health` | GET | Health check |
+| Endpoint    | Method | Description                |
+| ----------- | ------ | -------------------------- |
+| `/`         | GET    | Home page                  |
+| `/metadata` | GET    | SP Metadata XML            |
+| `/login`    | GET    | Start SAML login           |
+| `/acs`      | POST   | Assertion Consumer Service |
+| `/profile`  | GET    | View user attributes       |
+| `/debug`    | GET    | View raw SAML Response     |
+| `/logout`   | GET    | Logout                     |
+| `/health`   | GET    | Health check               |
 
 ## IdP Configuration
 
@@ -100,8 +100,9 @@ docker compose up
 ```
 
 This starts:
-- Keycloak IdP on http://localhost:8080
-- Simple SAML SP on http://localhost:3000
+
+- Keycloak IdP on `http://localhost:8080`
+- Simple SAML SP on `http://localhost:3000`
 
 ## Development
 
