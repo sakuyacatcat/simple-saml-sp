@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm run dev:*)",
+      "Bash(node dist/index.js:*)",
+      "Bash(IDP_METADATA_FILE=metadata/idp.xml IDP_METADATA_URL=\"\" node dist/index.js:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

@@ -29,9 +29,14 @@ services:
       PORT: 3000
       BASE_URL: http://localhost:3000
       SP_ENTITY_ID: http://localhost:3000/metadata
-      IDP_METADATA_URL: http://idp:8080/realms/myrealm/protocol/saml/descriptor
+      SP_KEY_FILE: /app/certs/sp.key
+      SP_CERT_FILE: /app/certs/sp.crt
+      IDP_METADATA_FILE: /app/metadata/idp.xml
       SESSION_SECRET: docker-compose-secret
       DEBUG: "true"
+    volumes:
+      - ./certs:/app/certs:ro
+      - ./metadata:/app/metadata:ro
     depends_on:
       idp:
         condition: service_healthy

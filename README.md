@@ -4,40 +4,63 @@ A lightweight SAML Service Provider (SP) test tool for IdP development and SAML 
 
 ## Features
 
-- Simple setup with `npm install && npm start`
-- Auto-fetch IdP metadata from URL
+- Hands-on SAML learning with manual certificate and metadata setup
 - Debug view for SAML Response inspection
 - YAML + environment variable configuration
 - Docker support included
 
 ## Quick Start
 
+### 1. Create SP Certificate
+
 ```bash
-# Clone and install
-git clone <repository-url>
-cd simple-saml-sp
+mkdir -p certs
+openssl req -x509 -newkey rsa:2048 \
+  -keyout certs/sp.key \
+  -out certs/sp.crt \
+  -days 365 -nodes \
+  -subj "/CN=Simple SAML SP/O=Test Organization"
+```
+
+### 2. Start Keycloak IdP
+
+```bash
+make idp-up
+```
+
+### 3. Download IdP Metadata
+
+```bash
+mkdir -p metadata
+curl -o metadata/idp.xml \
+  http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+```
+
+### 4. Configure and Run
+
+```bash
 npm install
-
-# Configure
 cp config.example.yaml config.yaml
-# Edit config.yaml with your IdP settings
-
-# Run
 npm run dev
 ```
 
-Open `http://localhost:3000`
+Open `http://localhost:3000` and click "Login with SAML"
+
+- Test user: `testuser` / `password`
 
 ## Configuration
 
-### Using config.yaml
+### config.yaml
 
 ```yaml
 sp:
   entityId: http://localhost:3000/metadata
+  keyFile: certs/sp.key      # SP private key
+  certFile: certs/sp.crt     # SP certificate
 
 idp:
-  metadataUrl: http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+  metadataFile: metadata/idp.xml  # Local file (recommended for learning)
+  # metadataUrl: http://...       # Or fetch from URL
 
 server:
   port: 3000
@@ -46,19 +69,19 @@ server:
 
 debug:
   enabled: true
-  logSamlMessages: true
 ```
 
-### Using Environment Variables
+### Environment Variables
 
-```bash
-PORT=3000
-BASE_URL=http://localhost:3000
-SP_ENTITY_ID=http://localhost:3000/metadata
-IDP_METADATA_URL=http://localhost:8080/realms/myrealm/protocol/saml/descriptor
-SESSION_SECRET=your-secret
-DEBUG=true
-```
+| Variable | Description |
+|----------|-------------|
+| `SP_KEY_FILE` | SP private key file path |
+| `SP_CERT_FILE` | SP certificate file path |
+| `IDP_METADATA_FILE` | IdP metadata file path |
+| `IDP_METADATA_URL` | IdP metadata URL (alternative) |
+| `SP_ENTITY_ID` | SP Entity ID |
+| `BASE_URL` | SP base URL |
+| `SESSION_SECRET` | Session secret |
 
 ## Endpoints
 
@@ -71,49 +94,33 @@ DEBUG=true
 | `/profile`  | GET    | View user attributes       |
 | `/debug`    | GET    | View raw SAML Response     |
 | `/logout`   | GET    | Logout                     |
-| `/health`   | GET    | Health check               |
-
-## IdP Configuration
-
-Register this SP in your IdP with:
-
-- **Entity ID**: `http://localhost:3000/metadata`
-- **ACS URL**: `http://localhost:3000/acs` (POST binding)
-- **SLO URL**: `http://localhost:3000/slo` (Redirect binding)
-
-Download the SP metadata from `/metadata` for automatic configuration.
 
 ## Docker
 
+### With Docker Compose
+
 ```bash
-# Build and run
+# 1. Create certificate and download metadata (see Quick Start steps 1-3)
+
+# 2. Start with Docker Compose
+make docker-up
+```
+
+The `certs/` and `metadata/` directories are mounted into the container.
+
+### Standalone
+
+```bash
 docker build -t simple-saml-sp .
 docker run -p 3000:3000 \
-  -e IDP_METADATA_URL=http://your-idp/metadata \
+  -v $(pwd)/certs:/app/certs:ro \
+  -v $(pwd)/metadata:/app/metadata:ro \
   simple-saml-sp
 ```
 
-### With Keycloak (docker-compose)
+## Documentation
 
-```bash
-docker compose up
-```
-
-This starts:
-
-- Keycloak IdP on `http://localhost:8080`
-- Simple SAML SP on `http://localhost:3000`
-
-## Development
-
-```bash
-# Development mode with hot reload
-npm run dev
-
-# Build for production
-npm run build
-npm start
-```
+For detailed SAML flow explanation and learning guide, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## License
 

@@ -7,10 +7,11 @@
 1. [SAML 認証フロー](#saml-認証フロー)
 2. [メタデータの構造](#メタデータの構造)
 3. [このプロジェクトでの実装](#このプロジェクトでの実装)
-4. [メタデータの手動設定方法](#メタデータの手動設定方法)
-5. [署名と証明書](#署名と証明書)
-6. [Keycloak と realm-export.json](#keycloak-と-realm-exportjson)
-7. [デバッグ](#デバッグ)
+4. [学習モード: 手動セットアップ](#学習モード-手動セットアップ)
+5. [メタデータの手動設定方法](#メタデータの手動設定方法)
+6. [署名と証明書](#署名と証明書)
+7. [Keycloak と realm-export.json](#keycloak-と-realm-exportjson)
+8. [デバッグ](#デバッグ)
 
 ---
 
@@ -169,9 +170,10 @@ SP メタデータは、SP の情報を IdP に伝えるための XML ドキュ�
 ┌─────────────────────────────────────────────────────────────┐
 │ SP (src/index.ts)                                           │
 │                                                             │
-│  1. config.yaml / 環境変数から IDP_METADATA_URL を取得      │
+│  1. config.yaml から idp.metadataFile を確認               │
+│     (優先順位: metadataFile > metadataUrl > 手動設定)       │
 │                     ↓                                       │
-│  2. axios.get(IDP_METADATA_URL) で IdP メタデータを取得     │
+│  2. ローカルファイル or URL から IdP メタデータを取得       │
 │                     ↓                                       │
 │  3. samlify.IdentityProvider({ metadata: xml }) で解析      │
 │                     ↓                                       │
@@ -182,11 +184,17 @@ SP メタデータは、SP の情報を IdP に伝えるための XML ドキュ�
 **実装コード（src/saml/idp.ts）:**
 
 ```typescript
-// IdP メタデータを URL から自動取得
-const response = await axios.get(config.idp.metadataUrl);
-return samlify.IdentityProvider({
-  metadata: response.data,
-});
+// 優先順位1: ローカルファイルから読み込み（学習モード推奨）
+if (config.idp.metadataFile) {
+  const metadata = fs.readFileSync(metadataPath, 'utf-8');
+  return samlify.IdentityProvider({ metadata });
+}
+
+// 優先順位2: URL から自動取得
+if (config.idp.metadataUrl) {
+  const response = await axios.get(config.idp.metadataUrl);
+  return samlify.IdentityProvider({ metadata: response.data });
+}
 ```
 
 ### SP メタデータの生成
@@ -199,7 +207,7 @@ return samlify.IdentityProvider({
 │ samlify が config から XML を自動生成                       │
 │   - entityID: config.sp.entityId                           │
 │   - ACS URL: config.server.baseUrl + "/acs"                │
-│   - 署名証明書: 起動時に自動生成                            │
+│   - 署名証明書: certs/sp.crt から読み込み                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -246,6 +254,155 @@ router.post("/acs", async (req, res) => {
   };
 });
 ```
+
+---
+
+## 学習モード: 手動セットアップ
+
+SAML の「メタデータ交換」プロセスを学習するため、証明書とメタデータを手動で配置して動作させることができます。
+
+### セットアップ手順
+
+#### Step 1: SP 証明書の作成
+
+まず、SP が使用する自己署名証明書を OpenSSL で作成します：
+
+```bash
+mkdir -p certs
+openssl req -x509 -newkey rsa:2048 \
+  -keyout certs/sp.key \
+  -out certs/sp.crt \
+  -days 365 -nodes \
+  -subj "/CN=Simple SAML SP/O=Test Organization"
+```
+
+作成されるファイル：
+
+| ファイル | 説明 |
+|---------|------|
+| `certs/sp.key` | SP 秘密鍵 - AuthnRequest の署名に使用 |
+| `certs/sp.crt` | SP 公開鍵証明書 - IdP に登録、SP metadata に含まれる |
+
+#### Step 2: Keycloak の起動
+
+```bash
+make idp-up
+# Keycloak が http://localhost:8080 で起動
+```
+
+#### Step 3: IdP metadata のダウンロード
+
+Keycloak から IdP metadata をダウンロードします：
+
+```bash
+mkdir -p metadata
+curl -o metadata/idp.xml \
+  http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+```
+
+または、ブラウザで以下の URL にアクセスして XML を保存：
+
+```
+http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+```
+
+ダウンロードした metadata には以下が含まれます：
+
+- IdP の entityID
+- SSO/SLO エンドポイント URL
+- 署名検証用の公開鍵証明書
+
+#### Step 4: 設定ファイルの作成
+
+`config.example.yaml` をコピーして `config.yaml` を作成：
+
+```bash
+cp config.example.yaml config.yaml
+```
+
+デフォルト設定で、以下のファイルパスが使用されます：
+
+```yaml
+sp:
+  keyFile: certs/sp.key
+  certFile: certs/sp.crt
+
+idp:
+  metadataFile: metadata/idp.xml
+```
+
+#### Step 5: SP の起動と metadata 確認
+
+```bash
+npm run dev
+```
+
+SP metadata を確認するには、ブラウザで以下にアクセス：
+
+```
+http://localhost:3000/metadata
+```
+
+この XML には SP の entityID、ACS URL、署名証明書が含まれています。
+
+#### Step 6: 動作確認
+
+```
+http://localhost:3000
+```
+
+「Login with SAML」をクリックして、SSO フローを確認します。
+
+- テストユーザー: `testuser` / `password`
+
+### トラブルシューティング
+
+| エラーメッセージ | 原因 | 解決策 |
+|-----------------|------|--------|
+| `SP private key not found` | 証明書未作成 | Step 1 の OpenSSL コマンドを実行 |
+| `IdP metadata file not found` | metadata 未取得 | Step 3 の curl コマンドを実行 |
+| `Signature validation failed` | 証明書の不一致 | IdP/SP 両方の証明書を確認 |
+
+### 学習のポイント
+
+1. **証明書の役割**: SP の秘密鍵で AuthnRequest に署名し、IdP の公開鍵で SAMLResponse を検証
+2. **metadata の内容**: EntityID、エンドポイント URL、証明書が含まれる
+3. **信頼関係**: SP と IdP は互いの metadata を交換することで信頼関係を構築
+
+### Docker 環境での学習モード
+
+Docker Compose でも同じ学習モードを体験できます。
+
+#### Step 1-3: ローカルと同じ
+
+証明書と metadata を先にローカルで作成します：
+
+```bash
+# SP証明書を作成
+mkdir -p certs
+openssl req -x509 -newkey rsa:2048 \
+  -keyout certs/sp.key \
+  -out certs/sp.crt \
+  -days 365 -nodes \
+  -subj "/CN=Simple SAML SP/O=Test Organization"
+
+# Keycloakを起動
+make idp-up
+
+# IdP metadataをダウンロード
+mkdir -p metadata
+curl -o metadata/idp.xml \
+  http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+```
+
+#### Step 4: Docker Compose で起動
+
+```bash
+make docker-up
+```
+
+`docker-compose.yml` は `certs/` と `metadata/` をコンテナにマウントするため、
+ローカルで作成したファイルがそのまま使われます。
 
 ---
 
@@ -313,14 +470,16 @@ Keycloak に SP を登録するには、`idp/realm-export.json` の `clients` �
 
 ### このプロジェクトでの証明書管理
 
-**SP 側（自動生成）:**
+**SP 側（ファイルから読み込み）:**
 
 ```txt
-起動時に node-forge で自己署名証明書を生成
+ユーザーが OpenSSL で証明書を生成
   ↓
-src/saml/cert.ts: generateSelfSignedCert()
+certs/sp.key, certs/sp.crt に配置
   ↓
-メモリに保持（再起動で再生成）
+src/saml/cert.ts: loadCertificateFromFiles() で読み込み
+  ↓
+再起動しても同じ証明書を使用
 ```
 
 **IdP 側（固定）:**
@@ -330,7 +489,7 @@ idp/realm-export.json に秘密鍵・証明書を定義
   ↓
 Keycloak 起動時にインポート
   ↓
-再起動しても同じ証明書を使用（SP 側の設定変更不要）
+再起動しても同じ証明書を使用
 ```
 
 ### 証明書を変更する場合

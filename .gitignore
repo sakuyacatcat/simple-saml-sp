@@ -2,6 +2,20 @@ node_modules/
 dist/
 .env
 config.yaml
-certs/
 *.log
 .DS_Store
+
+# SP certificates (keep directory structure)
+certs/*.key
+certs/*.crt
+certs/*.pem
+!certs/.gitkeep
+!certs/README.md
+
+# IdP metadata (keep directory structure)
+metadata/*.xml
+!metadata/.gitkeep
+!metadata/README.md
+
+# claude local files
+.claude/settings.local.json

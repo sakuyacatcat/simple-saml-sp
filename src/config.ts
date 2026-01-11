@@ -6,8 +6,11 @@ import 'dotenv/config';
 export interface Config {
   sp: {
     entityId: string;
+    keyFile: string;
+    certFile: string;
   };
   idp: {
+    metadataFile?: string;
     metadataUrl?: string;
     entityId?: string;
     ssoUrl?: string;
@@ -27,8 +30,11 @@ export interface Config {
 interface YamlConfig {
   sp?: {
     entityId?: string;
+    keyFile?: string;
+    certFile?: string;
   };
   idp?: {
+    metadataFile?: string;
     metadataUrl?: string;
     entityId?: string;
     ssoUrl?: string;
@@ -63,8 +69,11 @@ export function loadConfig(): Config {
   return {
     sp: {
       entityId: process.env.SP_ENTITY_ID || yamlConfig.sp?.entityId || `${baseUrl}/metadata`,
+      keyFile: process.env.SP_KEY_FILE || yamlConfig.sp?.keyFile || 'certs/sp.key',
+      certFile: process.env.SP_CERT_FILE || yamlConfig.sp?.certFile || 'certs/sp.crt',
     },
     idp: {
+      metadataFile: process.env.IDP_METADATA_FILE || yamlConfig.idp?.metadataFile,
       metadataUrl: process.env.IDP_METADATA_URL || yamlConfig.idp?.metadataUrl,
       entityId: process.env.IDP_ENTITY_ID || yamlConfig.idp?.entityId,
       ssoUrl: process.env.IDP_SSO_URL || yamlConfig.idp?.ssoUrl,

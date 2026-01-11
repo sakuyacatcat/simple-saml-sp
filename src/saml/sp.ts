@@ -1,20 +1,10 @@
 import * as samlify from 'samlify';
 import type { Config } from '../config.js';
-import { generateSelfSignedCert } from './cert.js';
-
-// Generate a key pair for signing (cached for the session)
-let cachedKeyPair: { privateKey: string; certificate: string } | null = null;
-
-function getKeyPair() {
-  if (!cachedKeyPair) {
-    console.log('Generating self-signed certificate for SP...');
-    cachedKeyPair = generateSelfSignedCert();
-  }
-  return cachedKeyPair;
-}
+import { loadCertificateFromFiles } from './cert.js';
 
 export function createServiceProvider(config: Config): samlify.ServiceProviderInstance {
-  const keyPair = getKeyPair();
+  // Load certificate from files (throws error with instructions if not found)
+  const keyPair = loadCertificateFromFiles(config.sp.keyFile, config.sp.certFile);
 
   return samlify.ServiceProvider({
     entityID: config.sp.entityId,

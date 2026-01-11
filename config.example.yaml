@@ -1,13 +1,19 @@
 # SP Settings
 sp:
   entityId: http://localhost:3000/metadata
+  # Certificate files (create with OpenSSL, see certs/README.md)
+  keyFile: certs/sp.key
+  certFile: certs/sp.crt
 
 # IdP Settings
 idp:
-  # Fetch metadata from URL (recommended)
-  metadataUrl: http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+  # Priority 1: Load from local file (recommended for learning)
+  metadataFile: metadata/idp.xml
 
-  # Or configure manually:
+  # Priority 2: Fetch from URL (for quick setup)
+  # metadataUrl: http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+
+  # Priority 3: Manual configuration
   # entityId: http://localhost:8080/realms/myrealm
   # ssoUrl: http://localhost:8080/realms/myrealm/protocol/saml
   # certificate: |

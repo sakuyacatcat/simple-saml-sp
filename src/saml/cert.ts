@@ -1,37 +1,53 @@
-import forge from 'node-forge';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface KeyPair {
   privateKey: string;
   certificate: string;
 }
 
-export function generateSelfSignedCert(): KeyPair {
-  // Generate RSA key pair
-  const keys = forge.pki.rsa.generateKeyPair(2048);
+/**
+ * Load certificate and private key from files.
+ * Throws an error with helpful instructions if files are not found.
+ */
+export function loadCertificateFromFiles(keyFile: string, certFile: string): KeyPair {
+  const keyPath = path.resolve(process.cwd(), keyFile);
+  const certPath = path.resolve(process.cwd(), certFile);
 
-  // Create certificate
-  const cert = forge.pki.createCertificate();
-  cert.publicKey = keys.publicKey;
-  cert.serialNumber = '01';
+  // Check if private key exists
+  if (!fs.existsSync(keyPath)) {
+    throw new Error(
+      `SP private key not found: ${keyPath}\n\n` +
+      `Please create a self-signed certificate with the following command:\n\n` +
+      `  mkdir -p certs\n` +
+      `  openssl req -x509 -newkey rsa:2048 \\\n` +
+      `    -keyout ${keyFile} \\\n` +
+      `    -out ${certFile} \\\n` +
+      `    -days 365 -nodes \\\n` +
+      `    -subj "/CN=Simple SAML SP/O=Test Organization"\n\n` +
+      `Then restart the application.`
+    );
+  }
 
-  // Valid for 1 year
-  cert.validity.notBefore = new Date();
-  cert.validity.notAfter = new Date();
-  cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
+  // Check if certificate exists
+  if (!fs.existsSync(certPath)) {
+    throw new Error(
+      `SP certificate not found: ${certPath}\n\n` +
+      `Please create a self-signed certificate with the following command:\n\n` +
+      `  mkdir -p certs\n` +
+      `  openssl req -x509 -newkey rsa:2048 \\\n` +
+      `    -keyout ${keyFile} \\\n` +
+      `    -out ${certFile} \\\n` +
+      `    -days 365 -nodes \\\n` +
+      `    -subj "/CN=Simple SAML SP/O=Test Organization"\n\n` +
+      `Then restart the application.`
+    );
+  }
 
-  // Set subject and issuer
-  const attrs = [
-    { name: 'commonName', value: 'Simple SAML SP' },
-    { name: 'organizationName', value: 'Test Organization' },
-  ];
-  cert.setSubject(attrs);
-  cert.setIssuer(attrs);
-
-  // Self-sign
-  cert.sign(keys.privateKey, forge.md.sha256.create());
+  console.log(`Loading SP certificate from: ${keyFile}, ${certFile}`);
 
   return {
-    privateKey: forge.pki.privateKeyToPem(keys.privateKey),
-    certificate: forge.pki.certificateToPem(cert),
+    privateKey: fs.readFileSync(keyPath, 'utf-8'),
+    certificate: fs.readFileSync(certPath, 'utf-8'),
   };
 }
