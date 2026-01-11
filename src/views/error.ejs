@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error - Simple SAML SP</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1><%= title || 'Error' %></h1>
+
+    <div class="status-card error-card">
+      <div class="status error">Error</div>
+      <p class="error-message"><%= message %></p>
+      <div class="actions">
+        <a href="/" class="btn">Back to Home</a>
+        <a href="/login" class="btn btn-primary">Try Again</a>
+      </div>
+    </div>
+
+    <% if (details) { %>
+    <div class="info-section">
+      <h2>Debug Details</h2>
+      <pre class="error-details"><%= typeof details === 'object' ? JSON.stringify(details, null, 2) : details %></pre>
+    </div>
+    <% } %>
+
+    <div class="info-section">
+      <h2>Common Issues</h2>
+      <ul class="help-list">
+        <li><strong>Signature validation failed:</strong> Ensure the IdP certificate in your configuration matches the one used to sign the response.</li>
+        <li><strong>Invalid assertion:</strong> Check that the SP Entity ID matches what's registered in the IdP.</li>
+        <li><strong>Destination mismatch:</strong> Verify the ACS URL is correctly configured in both SP and IdP.</li>
+        <li><strong>Time skew:</strong> Ensure server clocks are synchronized (NTP).</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

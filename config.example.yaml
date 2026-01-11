@@ -1,0 +1,25 @@
+# SP Settings
+sp:
+  entityId: http://localhost:3000/metadata
+
+# IdP Settings
+idp:
+  # Fetch metadata from URL (recommended)
+  metadataUrl: http://localhost:8080/realms/myrealm/protocol/saml/descriptor
+
+  # Or configure manually:
+  # entityId: http://localhost:8080/realms/myrealm
+  # ssoUrl: http://localhost:8080/realms/myrealm/protocol/saml
+  # certificate: |
+  #   MIIDBTCCAe2gAwIBAgIU...
+
+# Server Settings
+server:
+  port: 3000
+  baseUrl: http://localhost:3000
+  sessionSecret: change-me-in-production
+
+# Debug Settings
+debug:
+  enabled: true
+  logSamlMessages: true

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Simple SAML SP</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>User Profile</h1>
+
+    <div class="status-card">
+      <div class="status authenticated">Authenticated as <%= user.nameId %></div>
+      <div class="meta">Login time: <%= loginTime %></div>
+      <div class="actions">
+        <a href="/" class="btn">Home</a>
+        <a href="/debug" class="btn btn-secondary">Debug Info</a>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h2>SAML Attributes</h2>
+      <table class="info-table attributes-table">
+        <thead>
+          <tr>
+            <th>Attribute Name</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>NameID</strong></td>
+            <td><code><%= user.nameId %></code></td>
+          </tr>
+          <% if (user.sessionIndex) { %>
+          <tr>
+            <td><strong>Session Index</strong></td>
+            <td><code><%= user.sessionIndex %></code></td>
+          </tr>
+          <% } %>
+          <% Object.entries(user.attributes).forEach(([key, value]) => { %>
+          <tr>
+            <td><%= key %></td>
+            <td>
+              <% if (Array.isArray(value)) { %>
+                <% value.forEach((v, i) => { %>
+                  <code><%= v %></code><% if (i < value.length - 1) { %>, <% } %>
+                <% }); %>
+              <% } else { %>
+                <code><%= value %></code>
+              <% } %>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-section">
+      <h2>Export</h2>
+      <button onclick="copyJson()" class="btn btn-secondary">Copy as JSON</button>
+      <pre id="json-output" style="display:none;"><%= JSON.stringify({ nameId: user.nameId, sessionIndex: user.sessionIndex, attributes: user.attributes }, null, 2) %></pre>
+    </div>
+  </div>
+
+  <script>
+    function copyJson() {
+      const json = document.getElementById('json-output').textContent;
+      navigator.clipboard.writeText(json).then(() => {
+        alert('Copied to clipboard!');
+      });
+    }
+  </script>
+</body>
+</html>

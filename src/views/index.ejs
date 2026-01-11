@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple SAML SP</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Simple SAML SP Test Tool</h1>
+
+    <div class="status-card">
+      <% if (authenticated) { %>
+        <div class="status authenticated">Authenticated as <%= user.nameId %></div>
+        <div class="actions">
+          <a href="/profile" class="btn">View Profile</a>
+          <a href="/debug" class="btn btn-secondary">Debug Info</a>
+          <a href="/logout" class="btn btn-danger">Logout</a>
+        </div>
+      <% } else { %>
+        <div class="status unauthenticated">Not authenticated</div>
+        <div class="actions">
+          <a href="/login" class="btn btn-primary">Login with SAML</a>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="info-section">
+      <h2>SP Information</h2>
+      <table class="info-table">
+        <tr>
+          <th>Entity ID</th>
+          <td><code><%= sp.entityId %></code></td>
+        </tr>
+        <tr>
+          <th>ACS URL</th>
+          <td><code><%= sp.acsUrl %></code></td>
+        </tr>
+        <tr>
+          <th>Metadata</th>
+          <td><a href="/metadata" target="_blank">Download XML</a></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="info-section">
+      <h2>IdP Information</h2>
+      <table class="info-table">
+        <tr>
+          <th>Entity ID</th>
+          <td><code><%= idp.entityId %></code></td>
+        </tr>
+        <tr>
+          <th>SSO URL</th>
+          <td><code><%= idp.ssoUrl %></code></td>
+        </tr>
+        <% if (idp.certificate) { %>
+        <tr>
+          <th>Certificate</th>
+          <td><span class="badge">Present</span></td>
+        </tr>
+        <% } %>
+      </table>
+    </div>
+
+    <div class="info-section">
+      <h2>Quick Links</h2>
+      <ul class="links">
+        <li><a href="/metadata">SP Metadata XML</a></li>
+        <li><a href="/health">Health Check</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - Simple SAML SP</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>SAML Response Debug</h1>
+
+    <div class="status-card">
+      <div class="status authenticated">Authenticated as <%= user.nameId %></div>
+      <div class="meta">Login time: <%= loginTime %></div>
+      <div class="actions">
+        <a href="/" class="btn">Home</a>
+        <a href="/profile" class="btn btn-secondary">Profile</a>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h2>Decoded SAML Response (XML)</h2>
+      <div class="xml-container">
+        <button onclick="copyXml()" class="btn btn-small">Copy XML</button>
+        <pre class="xml-code"><code><%- decodedResponse.replace(/</g, '&lt;').replace(/>/g, '&gt;') %></code></pre>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h2>Base64 Encoded Response</h2>
+      <div class="raw-container">
+        <button onclick="copyRaw()" class="btn btn-small">Copy Base64</button>
+        <textarea readonly class="raw-code" id="raw-response"><%= rawResponse %></textarea>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function copyXml() {
+      const xml = `<%- decodedResponse.replace(/`/g, '\\`').replace(/\$/g, '\\$') %>`;
+      navigator.clipboard.writeText(xml).then(() => alert('XML copied!'));
+    }
+    function copyRaw() {
+      const raw = document.getElementById('raw-response').value;
+      navigator.clipboard.writeText(raw).then(() => alert('Base64 copied!'));
+    }
+  </script>
+</body>
+</html>

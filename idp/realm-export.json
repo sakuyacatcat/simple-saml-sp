@@ -1,0 +1,64 @@
+{
+  "realm": "myrealm",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "http://localhost:3000/metadata",
+      "name": "Simple SAML SP",
+      "enabled": true,
+      "protocol": "saml",
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:3000/*"],
+      "adminUrl": "http://localhost:3000/acs",
+      "attributes": {
+        "saml.force.post.binding": "true",
+        "saml.authnstatement": "true",
+        "saml_force_name_id_format": "false",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "false",
+        "saml.client.signature": "false",
+        "saml_name_id_format": "username"
+      },
+      "fullScopeAllowed": true
+    }
+  ],
+  "components": {
+    "org.keycloak.keys.KeyProvider": [
+      {
+        "name": "rsa-saml-signing",
+        "providerId": "rsa",
+        "subComponents": {},
+        "config": {
+          "privateKey": ["MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDxp4dL0LnMqpfsUV/tq1BgRc3yeHVINe/xiqRvSB5GvnvH9aWdD92BOgOeqJgi5m07X+WSA47jnnh4RHkJKOtmLO6Xb0SEF4u5t/ZetPF50bmmchXJ2+8l98wl90X9VUhIevP9rW9e8EI1s/yTubAyILN5k/5AyUmUPcGT76lfqjH4WRF1420J71CF7kHNifNGlp0TWeZI48arsFbP9tM4uBP45umRGp2AakQlEjAXS9EVXw6em7SY/vWFKIw42j3UUelWotobD4qLoC/lxXY4y+GYCg0ZSE9T74F7jw/4o4R6u5WJnCCUroMPyHjxkILX+rIZuhWN3PFx5uobZHi3AgMBAAECggEAcoDkqWZyG4n76bSXRUknES8SSmGMhRZVpviAOOCNxAyvH00E19q0JO7l1zBgwiy4NmmWoGzCMJWe1LHxPgdfHy+MMEI/T23OvcXu3epT/1qCYt1s+JSXiUCUwaqcxdC6quljomCjRHOIk+TAegkC9YWsNSAMWgtmq3DlwCDP+y0AqzbdCKmmtiuH3uSCjlMqq9cFtYiKEUAAPq6fTCfolBvLPfqkXvaxuK4kHNg0hFMLchDq+FKILlheY+mcutVOX5ykjNIWP7SzCqXASlhF7ewRxvfdXaC/BJ997qQ7SOAnNZzfKnW8ZtctqYHDGwPORoZccpI1MazwUd7ci//83QKBgQD/nZo3q8qIeQLrEu/JISHY8KXUkGvsoHiHY2Bg1izmJItuPvr5kduKioBi1XRKL9Nq11wwLD5O+isMHQyt5WBrL/iKYFtf4ja71aadQd1gOO+iBUHGEVtQyiNHrbV/jd5BLWwCBGeE2ArrqPjXVXa6TowP9mXIpH13WkyDdhy8xQKBgQDyBI1DE00NeTddi0LAWuCcf2KF56elbq20doY2tUsMIQtJKYYGN6qqv0ZKhveoeZiPfDhndAWWcx5Y99xaRtiUdI0boXtiWYBMscWx4jRp0jjz6DECL83tGofVn7dLjBOAFfLdH2lSEb5eDDY/6OaqQBkVSdn558bUd4Kr+B0vSwKBgFqkwLNNMB0FDIvfwzhHj4EmlSezrxHSNeuMyfiM+o8CFo+ZtdYaawfN5YkmuH42R3pztDVA+zd2bx10j7J6zJ41/KTVVpHB3jbtpI/Pc3lTt2Z1BsX+EausgqZAa0Q4QsBKIyrz9OGe2wCGgveZTujyQajHb4CfE/7m/or/r2EhAoGAH7Xe+Hnv76MBUR1tGp0NrxO1ygvHWJK+6dVZ0pNAiQ9PVj+9ktT6ZLL5N8ylaIq+JZbGIS//h23//PJFCgMcX59B2ev3qbRGbkYgvCUCbxcfZT34JewzlCyUvbXWo2xwJak6kCSMfTdb9SCufwM6LfaGEtcBW5A16iLamUPCNy8CgYAMZ9cIEQagN6vjAc+8usI65Rt39iDseUWtIg8JffDM4rM/sHl2Fi5VDAkpTjsmHaHWpH8Tc+wlaxbTY5vPatzLKkZ6HOCoaMrKaQsgprBfdX9nP6exqY8mG8Rs2RtOnCov9lIaouhrDgeh4UFz7CA1+rrhfpL/CL1/X/3sMcN6rQ=="],
+          "certificate": ["MIIDBTCCAe2gAwIBAgIUBVBGZZi8TKohM0sl1Hm+d0khUqwwDQYJKoZIhvcNAQELBQAwEjEQMA4GA1UEAwwHbXlyZWFsbTAeFw0yNjAxMDcxNzAyMjJaFw0zNjAxMDUxNzAyMjJaMBIxEDAOBgNVBAMMB215cmVhbG0wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDxp4dL0LnMqpfsUV/tq1BgRc3yeHVINe/xiqRvSB5GvnvH9aWdD92BOgOeqJgi5m07X+WSA47jnnh4RHkJKOtmLO6Xb0SEF4u5t/ZetPF50bmmchXJ2+8l98wl90X9VUhIevP9rW9e8EI1s/yTubAyILN5k/5AyUmUPcGT76lfqjH4WRF1420J71CF7kHNifNGlp0TWeZI48arsFbP9tM4uBP45umRGp2AakQlEjAXS9EVXw6em7SY/vWFKIw42j3UUelWotobD4qLoC/lxXY4y+GYCg0ZSE9T74F7jw/4o4R6u5WJnCCUroMPyHjxkILX+rIZuhWN3PFx5uobZHi3AgMBAAGjUzBRMB0GA1UdDgQWBBSkqazXuf3FSQZQuCppSwPWP+cQIDAfBgNVHSMEGDAWgBSkqazXuf3FSQZQuCppSwPWP+cQIDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQDDLhQxHRWi/Mn4Tbw3MKn5V8oYHmKELEimVMvFUtHL3monVKj8grT6AXTCQxXK9UMsFY8lXdZwOkJfX7whhmzfulPXyvKz5qieItuj0WiMEOG7TrlTo+f35N65iPsu+iV/DsThaufIGeu8c28Fs/nFPp1a5Y+C7U4+unnb0h7ndvJMNNyWP0I/WJAfAkrnQ0IS1GyZmkZu/ZvOndENc2vqGCqc1/i4qT001aQXnQpUJXp2BESVo84tvNPYpJ1EeCG7okKLKET2EJZMAi5G8i67bP6SysR0664bBsq0NYeX4E2BvHAFC3s9GGbw0ywhRF7KLvZwGC/ftzs9j3y/oJ7D"],
+          "priority": ["100"],
+          "algorithm": ["RS256"]
+        }
+      }
+    ]
+  }
+}
