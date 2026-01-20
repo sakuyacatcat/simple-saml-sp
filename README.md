@@ -39,14 +39,47 @@ curl -o metadata/idp.xml \
 ### 4. Configure and Run
 
 ```bash
-npm install
+make install
 cp config.example.yaml config.yaml
-npm run dev
+make run
 ```
 
-Open `http://localhost:3000` and click "Login with SAML"
+Open `http://localhost:3000`
 
-- Test user: `testuser` / `password`
+## Try SSO
+
+### 1. Start SSO Flow
+
+1. Open http://localhost:3000
+2. Click **"Login with SAML"**
+3. You'll be redirected to Keycloak login page
+
+### 2. Login at IdP
+
+Login with the test user:
+
+- Username: `testuser`
+- Password: `password`
+
+### 3. View Result
+
+After successful authentication:
+
+- `/profile` - View user attributes (name, email, etc.)
+- `/debug` - Inspect raw SAML Response XML
+
+### What's Happening
+
+```
+Browser → SP(/login) → Keycloak(IdP) → SP(/acs) → /profile
+            ↑              ↑              ↑
+       AuthnRequest    User Login    SAMLResponse
+```
+
+1. SP generates **AuthnRequest** and redirects to IdP
+2. User authenticates at IdP (Keycloak)
+3. IdP sends **SAMLResponse** with user attributes to SP's ACS endpoint
+4. SP validates signature and creates session
 
 ## Configuration
 
@@ -55,11 +88,11 @@ Open `http://localhost:3000` and click "Login with SAML"
 ```yaml
 sp:
   entityId: http://localhost:3000/metadata
-  keyFile: certs/sp.key      # SP private key
-  certFile: certs/sp.crt     # SP certificate
+  keyFile: certs/sp.key # SP private key
+  certFile: certs/sp.crt # SP certificate
 
 idp:
-  metadataFile: metadata/idp.xml  # Local file (recommended for learning)
+  metadataFile: metadata/idp.xml # Local file (recommended for learning)
   # metadataUrl: http://...       # Or fetch from URL
 
 server:
@@ -73,15 +106,15 @@ debug:
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `SP_KEY_FILE` | SP private key file path |
-| `SP_CERT_FILE` | SP certificate file path |
-| `IDP_METADATA_FILE` | IdP metadata file path |
-| `IDP_METADATA_URL` | IdP metadata URL (alternative) |
-| `SP_ENTITY_ID` | SP Entity ID |
-| `BASE_URL` | SP base URL |
-| `SESSION_SECRET` | Session secret |
+| Variable            | Description                    |
+| ------------------- | ------------------------------ |
+| `SP_KEY_FILE`       | SP private key file path       |
+| `SP_CERT_FILE`      | SP certificate file path       |
+| `IDP_METADATA_FILE` | IdP metadata file path         |
+| `IDP_METADATA_URL`  | IdP metadata URL (alternative) |
+| `SP_ENTITY_ID`      | SP Entity ID                   |
+| `BASE_URL`          | SP base URL                    |
+| `SESSION_SECRET`    | Session secret                 |
 
 ## Endpoints
 

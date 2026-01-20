@@ -29,7 +29,7 @@ help:
 install:
 	npm install
 
-dev:
+run:
 	npm run dev
 
 build:

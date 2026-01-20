@@ -4,14 +4,136 @@
 
 ## 目次
 
-1. [SAML 認証フロー](#saml-認証フロー)
-2. [メタデータの構造](#メタデータの構造)
-3. [このプロジェクトでの実装](#このプロジェクトでの実装)
-4. [学習モード: 手動セットアップ](#学習モード-手動セットアップ)
-5. [メタデータの手動設定方法](#メタデータの手動設定方法)
-6. [署名と証明書](#署名と証明書)
-7. [Keycloak と realm-export.json](#keycloak-と-realm-exportjson)
-8. [デバッグ](#デバッグ)
+1. [プロジェクトアーキテクチャ](#プロジェクトアーキテクチャ)
+2. [SAML 認証フロー](#saml-認証フロー)
+3. [メタデータの構造](#メタデータの構造)
+4. [このプロジェクトでの実装](#このプロジェクトでの実装)
+5. [学習モード: 手動セットアップ](#学習モード-手動セットアップ)
+6. [メタデータの手動設定方法](#メタデータの手動設定方法)
+7. [署名と証明書](#署名と証明書)
+8. [Keycloak と realm-export.json](#keycloak-と-realm-exportjson)
+9. [デバッグ](#デバッグ)
+
+---
+
+## プロジェクトアーキテクチャ
+
+### ディレクトリ構成
+
+```
+simple-saml-sp/
+├── src/                    # TypeScript ソースコード
+│   ├── index.ts           # エントリーポイント（Express アプリ初期化）
+│   ├── config.ts          # 設定ロード（YAML + 環境変数）
+│   ├── routes/
+│   │   └── index.ts       # 全 HTTP エンドポイント定義
+│   ├── saml/
+│   │   ├── sp.ts          # Service Provider インスタンス生成
+│   │   ├── idp.ts         # Identity Provider メタデータ取得・解析
+│   │   └── cert.ts        # 証明書ファイル読み込み
+│   └── views/             # EJS テンプレート
+│       ├── index.ejs      # ホームページ
+│       ├── profile.ejs    # ユーザー属性表示
+│       └── debug.ejs      # SAML レスポンス詳細
+├── certs/                  # SP 証明書（.gitignore）
+├── metadata/               # IdP メタデータ（.gitignore）
+├── idp/                    # Keycloak 設定
+│   └── realm-export.json  # Realm 定義（自動インポート用）
+├── public/                 # 静的ファイル
+├── config.example.yaml     # 設定テンプレート
+└── docker-compose.yml      # Docker 環境定義
+```
+
+### レイヤー構成
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     HTTP Layer (Express)                     │
+│  src/routes/index.ts                                        │
+│  - GET /, /login, /metadata, /profile, /debug, /logout      │
+│  - POST /acs                                                │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                     SAML Layer (samlify)                     │
+│  src/saml/sp.ts    - SP インスタンス、AuthnRequest 生成     │
+│  src/saml/idp.ts   - IdP メタデータ取得・解析               │
+│  src/saml/cert.ts  - 証明書読み込み                         │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                   Config Layer                               │
+│  src/config.ts     - YAML + 環境変数のマージ                │
+│  config.yaml       - ユーザー設定（.gitignore）             │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                   External Resources                         │
+│  certs/sp.key, sp.crt  - SP 証明書                          │
+│  metadata/idp.xml      - IdP メタデータ                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 主要ファイルの役割
+
+| ファイル | 責務 |
+|---------|------|
+| `src/index.ts` | Express アプリの初期化、ミドルウェア設定、サーバー起動 |
+| `src/config.ts` | `config.yaml` と環境変数から設定を読み込み、マージ |
+| `src/routes/index.ts` | 全エンドポイントのルーティングとリクエスト処理 |
+| `src/saml/sp.ts` | samlify の ServiceProvider インスタンスを生成 |
+| `src/saml/idp.ts` | IdP メタデータをファイル/URL から取得し、IdentityProvider を生成 |
+| `src/saml/cert.ts` | `certs/` から秘密鍵と証明書を読み込み |
+
+### 起動シーケンス
+
+```
+npm run dev
+    ↓
+src/index.ts: main()
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 1. loadConfig()                                              │
+│    - config.yaml を読み込み                                  │
+│    - 環境変数で上書き                                        │
+│    - デフォルト値を適用                                      │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. createServiceProvider(config)                             │
+│    - loadCertificateFromFiles() で証明書読み込み            │
+│    - samlify.ServiceProvider() でインスタンス生成           │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. createIdentityProvider(config)                            │
+│    - metadata/idp.xml からメタデータ読み込み                │
+│    - samlify.IdentityProvider() でインスタンス生成          │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Express セットアップ                                      │
+│    - express-session ミドルウェア                           │
+│    - EJS テンプレートエンジン                               │
+│    - ルーター登録                                           │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 5. app.listen(port)                                          │
+│    - サーバー起動                                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 依存ライブラリ
+
+| ライブラリ | 用途 |
+|-----------|------|
+| `express` | Web フレームワーク |
+| `samlify` | SAML 2.0 プロトコル処理（AuthnRequest 生成、SAMLResponse 検証） |
+| `express-session` | セッション管理 |
+| `ejs` | テンプレートエンジン |
+| `js-yaml` | YAML 設定ファイルの解析 |
+| `axios` | IdP メタデータの HTTP 取得（URL 指定時） |
 
 ---
 
@@ -531,6 +653,39 @@ make docker-up
 ---
 
 ## Keycloak と realm-export.json
+
+### Keycloak とは
+
+[Keycloak](https://www.keycloak.org/) は Red Hat が開発するオープンソースの Identity and Access Management（IAM）ソリューションです。SAML 2.0、OpenID Connect、OAuth 2.0 などの標準プロトコルをサポートし、IdP（Identity Provider）として動作します。
+
+**特徴:**
+
+- オープンソース（Apache License 2.0）
+- Docker で簡単にセットアップ可能
+- 管理 UI が充実
+- 多くの企業で本番利用されている
+
+### Keycloak 用語と一般的な IdP 用語の対応
+
+Keycloak には独自の用語があります。他の IdP サービスを使う場合は、以下の対応関係を参考にしてください：
+
+| Keycloak 用語 | 一般的な用語 | Okta | Azure AD | Auth0 |
+|--------------|-------------|------|----------|-------|
+| Realm | テナント / 名前空間 | Org | Directory (Tenant) | Tenant |
+| Client | SP / アプリケーション | Application | App Registration | Application |
+| User | ユーザー | User | User | User |
+| Client ID | Entity ID / Client ID | Client ID | Application ID | Client ID |
+| Realm Settings | IdP 設定 | Org Settings | Directory Settings | Tenant Settings |
+
+**用語の詳細:**
+
+| 用語 | 説明 |
+|-----|------|
+| **Realm** | ユーザー、クライアント、ロールなどを管理する独立した空間。マルチテナント環境では Realm ごとに分離される |
+| **Client** | Keycloak に登録されたアプリケーション。SAML では SP（Service Provider）に相当 |
+| **User** | 認証対象のエンドユーザー。Realm ごとに管理される |
+| **Role** | ユーザーに付与する権限。Realm ロールとクライアントロールがある |
+| **Identity Provider** | 外部 IdP との連携設定（ソーシャルログインなど）。Keycloak 自体が IdP として動作する場合は不要 |
 
 ### Keycloak の基本構造
 
